@@ -16,7 +16,12 @@ export default function ResumenPage() {
           <h2 className="text-2xl font-black text-yellow-300 mb-6">
             TU PERFIL
           </h2>
-
+<a
+  href="/"
+  className="mb-4 block rounded-2xl border border-cyan-400/20 bg-cyan-400/10 px-4 py-3 text-center font-black text-cyan-200"
+>
+  ← Volver al Menú Principal
+</a>
           <nav className="space-y-3">
             <a href="/perfil/datos-personales" className="block rounded-2xl bg-white/5 px-4 py-3 font-bold text-white/70">
               Datos personales

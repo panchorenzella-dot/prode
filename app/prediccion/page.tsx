@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useState } from "react";
+import { supabase } from "@/lib/supabaseClient";
 
 const CSS = `
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=Bebas+Neue&display=swap');
@@ -451,6 +452,8 @@ export default function SimuladorMundial2026() {
   const [currentRound, setCurrentRound] = useState<Round>("r32");
   const [showConfetti, setShowConfetti] = useState(false);
   const [champion, setChampion] = useState<Team | null>(null);
+  const [savedPredictionId, setSavedPredictionId] = useState<string | null>(null);
+  const [savingPrediction, setSavingPrediction] = useState(false);
 
   useEffect(() => {
     if (document.getElementById("mundial-2026-styles")) return;
@@ -464,6 +467,85 @@ export default function SimuladorMundial2026() {
       document.getElementById("mundial-2026-styles")?.remove();
     };
   }, []);
+
+  const buildPredictionData = useCallback(() => {
+    return {
+      groups,
+      selectedThirds,
+      bracket,
+      champion,
+      currentRound,
+      saved_at: new Date().toISOString(),
+    };
+  }, [groups, selectedThirds, bracket, champion, currentRound]);
+
+  const guardarPrediccion = useCallback(async () => {
+    setSavingPrediction(true);
+
+    const {
+      data: { user },
+      error: userError,
+    } = await supabase.auth.getUser();
+
+    if (userError || !user) {
+      setSavingPrediction(false);
+      alert("Tenés que iniciar sesión para guardar la predicción.");
+      window.location.href = "/login";
+      return null;
+    }
+
+    const predictionData = buildPredictionData();
+
+    if (savedPredictionId) {
+      const { error } = await supabase
+        .from("predictions")
+        .update({
+          prediction_data: predictionData,
+          status: "borrador",
+        })
+        .eq("id", savedPredictionId)
+        .eq("user_id", user.id);
+
+      setSavingPrediction(false);
+
+      if (error) {
+        alert("Error al actualizar la predicción: " + error.message);
+        return null;
+      }
+
+      return savedPredictionId;
+    }
+
+    const { data, error } = await supabase
+      .from("predictions")
+      .insert({
+        user_id: user.id,
+        prediction_data: predictionData,
+        status: "borrador",
+      })
+      .select("id")
+      .single();
+
+    setSavingPrediction(false);
+
+    if (error) {
+      alert("Error al guardar la predicción: " + error.message);
+      return null;
+    }
+
+    setSavedPredictionId(data.id);
+    localStorage.setItem("current_prediction_id", data.id);
+
+    return data.id;
+  }, [buildPredictionData, savedPredictionId]);
+
+  const irAParticipar = useCallback(async () => {
+    const id = await guardarPrediccion();
+
+    if (!id) return;
+
+    window.location.href = `/participar?prediction_id=${id}`;
+  }, [guardarPrediccion]);
 
   const thirdPlaceTeams = useMemo(
     () =>
@@ -790,9 +872,13 @@ export default function SimuladorMundial2026() {
                 <div className="champion-title">¡{champion.name.toUpperCase()} CAMPEÓN DEL MUNDO!</div>
                 <div className="champion-subtitle">🏆 FIFA World Cup 2026 🏆</div>
                 <div style={{ display: "flex", justifyContent: "center", gap: 16, flexWrap: "wrap" }}>
-                  <a href="/participar" className="btn btn-primary" style={{ textDecoration: "none" }}>
-                    🏆 Participar por el Premio
-                  </a>
+                  <button
+                    className="btn btn-primary"
+                    onClick={irAParticipar}
+                    disabled={savingPrediction}
+                  >
+                    {savingPrediction ? "Guardando..." : "🏆 Participar por el Premio"}
+                  </button>
 
                   <button className="btn btn-danger" onClick={resetAll}>
                     🔄 Nueva Simulación

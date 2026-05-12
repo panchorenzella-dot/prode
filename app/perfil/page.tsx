@@ -7,7 +7,12 @@ export default function PerfilPage() {
         <aside className="rounded-[28px] border border-white/10 bg-white/[0.04] p-5 h-fit">
           <h2 className="text-2xl font-black text-yellow-300 mb-6">TU PERFIL</h2>
 
-          <nav className="space-y-3">
+         <a
+  href="/"
+  className="mb-4 block rounded-2xl border border-cyan-400/20 bg-cyan-400/10 px-4 py-3 text-center font-black text-cyan-200"
+>
+  ← Volver al Menú Principal
+</a> <nav className="space-y-3">
             <a href="/perfil/datos-personales" className="block rounded-2xl bg-white/10 px-4 py-3 font-bold text-white">
               Datos personales
             </a>

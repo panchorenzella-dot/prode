@@ -111,46 +111,63 @@ export default function ParticiparPage() {
       return;
     }
 
-    const { data: nuevaPrediccion, error: insertError } = await supabase
-      .from("predictions")
-      .insert({
-        user_id: user.id,
-        status: "borrador",
-        prediction_data: {
-          participante: {
-            nombre,
-            email,
-            whatsapp,
-            usuario,
-          },
-          pago: {
-            metodo: "AstroPay",
-            monto: 500,
-          },
-        },
-      })
-      .select("id")
-      .single();
+    const predictionId =
+      new URLSearchParams(window.location.search).get("prediction_id") ||
+      localStorage.getItem("current_prediction_id");
 
-    if (insertError) {
-      setErrorMsg(insertError.message);
+    if (!predictionId) {
+      setErrorMsg(
+        "No encontré la predicción guardada. Volvé a hacer la predicción y tocá Participar por el Premio."
+      );
       setLoading(false);
       return;
     }
 
-    const { error: updateError } = await supabase
+    const { data: prediccionActual, error: readError } = await supabase
       .from("predictions")
-      .update({
-        status: "en_revision",
-        submitted_at: new Date().toISOString(),
-      })
-      .eq("id", nuevaPrediccion.id);
+      .select("prediction_data")
+      .eq("id", predictionId)
+      .eq("user_id", user.id)
+      .single();
 
+    if (readError || !prediccionActual) {
+      setErrorMsg("No pude encontrar tu predicción guardada.");
+      setLoading(false);
+      return;
+    }
+
+const { error: updateError } = await supabase
+  .from("predictions")
+  .update({
+    email,
+    nombre,
+    status: "en_revision",
+    submitted_at: new Date().toISOString(),
+    prediction_data: {
+      ...prediccionActual.prediction_data,
+      participante: {
+        nombre,
+        email,
+        whatsapp,
+        usuario,
+      },
+      pago: {
+        metodo: "AstroPay",
+        monto: 500,
+        confirmado_por_usuario: true,
+        confirmado_at: new Date().toISOString(),
+      },
+    },
+  })
+  .eq("id", predictionId)
+  .eq("user_id", user.id);
     if (updateError) {
       setErrorMsg(updateError.message);
       setLoading(false);
       return;
     }
+
+    localStorage.removeItem("current_prediction_id");
 
     setMensaje("Listo. Tu predicción quedó en revisión.");
     setLoading(false);
@@ -240,6 +257,7 @@ export default function ParticiparPage() {
               <div className="amount-label">Participación</div>
               <div className="amount-value">$500</div>
             </div>
+
             <div className="amount-item">
               <div className="amount-label">Método</div>
               <div className="amount-value">AstroPay</div>
@@ -248,7 +266,11 @@ export default function ParticiparPage() {
 
           <div className="qr-box">
             <div className="qr-placeholder">
-              <img src="/astropay-qr.png" alt="QR de pago AstroPay" className="qr-img" />
+              <img
+                src="/astropay-qr.png"
+                alt="QR de pago AstroPay"
+                className="qr-img"
+              />
             </div>
 
             <div className="steps">
@@ -256,10 +278,12 @@ export default function ParticiparPage() {
                 <div className="step-num">1</div>
                 Escaneá el QR con AstroPay.
               </div>
+
               <div className="step">
                 <div className="step-num">2</div>
                 Pagá la participación indicada.
               </div>
+
               <div className="step">
                 <div className="step-num">3</div>
                 Después de pagar, tocá el botón “Listo, ya pagué”.
