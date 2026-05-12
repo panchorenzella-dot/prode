@@ -143,13 +143,13 @@ export default function HomePage() {
 
             {userEmail ? (
               <div className="relative">
-                <button
-                  onClick={() => setPerfilAbierto((value) => !value)}
-                  className="flex items-center gap-2 rounded-xl border border-white/10 bg-white/5 px-4 py-2 text-sm font-bold text-white/85 transition hover:bg-white/10"
-                >
-                  <User size={17} />
-                  Tu perfil
-                </button>
+<a
+  href="/perfil/datos-personales"
+  className="flex items-center gap-2 rounded-xl border border-white/10 bg-white/5 px-4 py-2 text-sm font-bold text-white/85 transition hover:bg-white/10"
+>
+  <User size={17} />
+  Tu perfil
+</a>
 
                 {perfilAbierto && (
                   <div className="absolute right-0 z-20 mt-3 w-64 rounded-2xl border border-white/10 bg-[#0b1020] p-4 shadow-2xl">
