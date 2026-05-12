@@ -304,6 +304,12 @@ export default function MisPrediccionesPage() {
                           </div>
 
                           <div className="flex items-end gap-3 md:justify-end">
+                            <a
+  href={`/prediccion/${prediccion.id}`}
+  className="rounded-full border border-yellow-300/30 bg-yellow-300/10 px-5 py-3 font-black text-yellow-200 transition hover:bg-yellow-300/20"
+>
+  👁 Ver predicción
+</a>
                             {editable ? (
                               <a
                                 href="/prediccion"
