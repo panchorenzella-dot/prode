@@ -94,35 +94,76 @@ export default function VerPrediccionPage() {
     return () => document.getElementById("mundial-2026-readonly-styles")?.remove();
   }, []);
 
-  useEffect(() => {
-    async function cargar() {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) {
-        window.location.href = "/login";
-        return;
-      }
+ useEffect(() => {
+  async function cargar() {
+    const {
+      data: { user },
+    } = await supabase.auth.getUser();
 
-      const { data, error } = await supabase.from("predictions").select("*").eq("id", id).single();
+    if (!user) {
+      window.location.href = "/login";
+      return;
+    }
+
+    const isAdmin =
+      user.email?.toLowerCase() ===
+      ADMIN_EMAIL.toLowerCase();
+
+    // ADMIN
+    if (isAdmin) {
+      const { data, error } = await supabase
+        .from("predictions")
+        .select("*")
+        .eq("id", id)
+        .single();
+
       if (error || !data) {
         setDenied(true);
         setLoading(false);
         return;
       }
 
-      const isOwner = data.user_id === user.id;
-      const isAdmin = user.email === ADMIN_EMAIL;
-      if (!isOwner && !isAdmin) {
-        setDenied(true);
-        setLoading(false);
-        return;
-      }
-
       setPrediction(data);
-      setCurrentRound(getCurrentRound(data.prediction_data?.bracket ?? []));
+
+      setCurrentRound(
+        getCurrentRound(
+          data.prediction_data?.bracket ?? []
+        )
+      );
+
       setLoading(false);
+      return;
     }
-    if (id) cargar();
-  }, [id]);
+
+    // USUARIO NORMAL
+    const { data, error } = await supabase
+      .from("predictions")
+      .select("*")
+      .eq("id", id)
+      .eq("user_id", user.id)
+      .single();
+
+    if (error || !data) {
+      setDenied(true);
+      setLoading(false);
+      return;
+    }
+
+    setPrediction(data);
+
+    setCurrentRound(
+      getCurrentRound(
+        data.prediction_data?.bracket ?? []
+      )
+    );
+
+    setLoading(false);
+  }
+
+  if (id) {
+    cargar();
+  }
+}, [id]);
 
   const predictionData = prediction?.prediction_data ?? {};
   const groups = predictionData.groups ?? [];
