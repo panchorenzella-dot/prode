@@ -265,13 +265,20 @@ const { error: updateError } = await supabase
           </div>
 
           <div className="qr-box">
-            <div className="qr-placeholder">
-              <img
-                src="/astropay-qr.png"
-                alt="QR de pago AstroPay"
-                className="qr-img"
-              />
-            </div>
+<a
+  href="https://onetouch.astropay.com/payment?external_reference_id=uF0376wokKmLzDTuxJ8RMchqPxnQSY9r"
+  target="_blank"
+  rel="noopener noreferrer"
+  className="btn btn-primary"
+  style={{
+    width: "100%",
+    maxWidth: "320px",
+    height: "70px",
+    fontSize: "18px",
+  }}
+>
+  💳 PAGAR CON ASTROPAY
+</a>
 
             <div className="steps">
               <div className="step">

@@ -77,7 +77,6 @@ export default function DatosPersonalesPage() {
             <Dato label="Apellido" value={apellido || "No cargado"} />
             <Dato label="Email" value={email || "No cargado"} />
             <Dato label="DNI" value={dni || "No cargado"} />
-            <Dato label="Fecha de nacimiento" value={fechaNacimiento || "No cargado"} />
             <Dato label="Contraseña" value="••••••••" />
           </div>
 

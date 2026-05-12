@@ -7,7 +7,6 @@ export default function RegisterPage() {
   const [nombre, setNombre] = useState("");
   const [apellido, setApellido] = useState("");
   const [dni, setDni] = useState("");
-  const [fechaNacimiento, setFechaNacimiento] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [repeatPassword, setRepeatPassword] = useState("");
@@ -19,7 +18,6 @@ export default function RegisterPage() {
       !nombre.trim() ||
       !apellido.trim() ||
       !dni.trim() ||
-      !fechaNacimiento.trim() ||
       !email.trim() ||
       !password.trim() ||
       !repeatPassword.trim()
@@ -44,7 +42,6 @@ export default function RegisterPage() {
           nombre,
           apellido,
           dni,
-          fechaNacimiento,
         },
       },
     });
@@ -113,17 +110,6 @@ export default function RegisterPage() {
             value={dni}
             onChange={(e) => setDni(e.target.value)}
             placeholder="11.111.111"
-            className="w-full h-12 rounded-2xl border border-white/10 bg-white/[0.07] px-4 font-semibold text-white outline-none mb-5"
-          />
-
-          <label className="block text-xs font-black tracking-[1px] uppercase text-white/70 mb-3">
-            Fecha de nacimiento
-          </label>
-
-          <input
-            type="date"
-            value={fechaNacimiento}
-            onChange={(e) => setFechaNacimiento(e.target.value)}
             className="w-full h-12 rounded-2xl border border-white/10 bg-white/[0.07] px-4 font-semibold text-white outline-none mb-5"
           />
 
