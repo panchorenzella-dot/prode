@@ -3,6 +3,9 @@
 import { useEffect, useState } from "react";
 import { supabase } from "@/lib/supabaseClient";
 
+const LINK_PAGO_ASTROPAY =
+  "https://onetouch.astropay.com/payment?external_reference_id=uF0376wokKmLzDTuxJ8RMchqPxnQSY9r";
+
 const CSS = `
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=Bebas+Neue&display=swap');
 *,*::before,*::after{margin:0;padding:0;box-sizing:border-box}
@@ -14,6 +17,8 @@ body{font-family:'Inter',sans-serif;background:var(--blue-dark);color:#fff;min-h
 .btn{padding:12px 28px;border:none;border-radius:100px;font-family:'Inter',sans-serif;font-size:14px;font-weight:700;cursor:pointer;transition:all 0.25s cubic-bezier(0.34,1.56,0.64,1);letter-spacing:0.5px;text-decoration:none;display:inline-flex;align-items:center;justify-content:center;gap:8px}
 .btn-primary{background:linear-gradient(135deg,#ffd700,#ff9500);color:#000;box-shadow:0 4px 20px rgba(255,215,0,0.25)}
 .btn-primary:hover{transform:translateY(-2px);box-shadow:0 8px 30px rgba(255,215,0,0.4)}
+.btn-secondary{background:linear-gradient(135deg,#00d4ff22,#00d4ff11);border:1px solid rgba(0,212,255,0.4);color:var(--cyan)}
+.btn-secondary:hover{transform:translateY(-2px);background:linear-gradient(135deg,#00d4ff33,#00d4ff15);box-shadow:0 6px 20px rgba(0,212,255,0.2)}
 .btn-ghost{background:var(--glass);border:1px solid var(--glass-border);color:rgba(255,255,255,0.8)}
 .btn-ghost:hover{background:var(--glass-hover);transform:translateY(-2px)}
 .btn:disabled{opacity:.45;cursor:not-allowed;transform:none!important}
@@ -32,19 +37,20 @@ h1{font-family:'Bebas Neue',sans-serif;font-size:clamp(2.6rem,6vw,5rem);letter-s
 .input:focus{border-color:var(--gold);background:rgba(255,215,0,0.08);box-shadow:0 0 0 3px rgba(255,215,0,0.08)}
 .input-group{display:flex;flex-direction:column;gap:7px}
 .notice{margin-top:14px;border:1px solid rgba(0,212,255,0.25);background:rgba(0,212,255,0.07);border-radius:16px;padding:14px;color:rgba(255,255,255,0.75);font-size:13px;line-height:1.5}
-.qr-box{display:flex;flex-direction:column;align-items:center;text-align:center;gap:16px}
+.payment-box{display:flex;flex-direction:column;align-items:center;text-align:center;gap:16px}
 .amount-box{width:100%;display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:8px}
 .amount-item{background:rgba(255,255,255,0.045);border:1px solid var(--glass-border);border-radius:16px;padding:14px;text-align:left}
 .amount-label{font-size:11px;text-transform:uppercase;letter-spacing:1px;color:var(--text-muted);font-weight:800;margin-bottom:4px}
 .amount-value{font-size:20px;font-weight:900;color:#fff}
-.qr-placeholder{width:260px;height:260px;border-radius:24px;background:#fff;display:flex;align-items:center;justify-content:center;padding:14px;box-shadow:0 20px 60px rgba(0,0,0,0.35)}
-.qr-img{width:100%;height:100%;object-fit:contain;border-radius:16px}
-.steps{display:flex;flex-direction:column;gap:10px;margin-top:18px;width:100%}
+.payment-link-card{width:100%;border:1px solid rgba(255,215,0,0.26);background:linear-gradient(135deg,rgba(255,215,0,0.12),rgba(255,149,0,0.06));border-radius:22px;padding:20px;display:flex;flex-direction:column;gap:12px;align-items:center}
+.payment-title{font-size:14px;font-weight:900;color:#fff;text-transform:uppercase;letter-spacing:1px}
+.payment-text{font-size:13px;color:rgba(255,255,255,0.68);line-height:1.5;max-width:420px}
+.steps{display:flex;flex-direction:column;gap:10px;margin-top:6px;width:100%}
 .step{display:flex;align-items:center;gap:10px;background:rgba(255,255,255,0.035);border:1px solid var(--glass-border);border-radius:14px;padding:12px;text-align:left;font-size:13px;color:rgba(255,255,255,0.75)}
 .step-num{width:26px;height:26px;border-radius:50%;background:var(--gold);color:#000;font-size:12px;font-weight:900;display:flex;align-items:center;justify-content:center;flex-shrink:0}
 .success-box{margin-top:16px;border:1px solid rgba(46,213,115,0.35);background:rgba(46,213,115,0.08);border-radius:16px;padding:14px;color:rgba(255,255,255,0.78);font-size:13px;line-height:1.5}
 .error-box{margin-top:16px;border:1px solid rgba(255,71,87,0.35);background:rgba(255,71,87,0.08);border-radius:16px;padding:14px;color:rgba(255,255,255,0.78);font-size:13px;line-height:1.5}
-@media(max-width:850px){.main-grid{grid-template-columns:1fr}.amount-box{grid-template-columns:1fr}.qr-placeholder{width:220px;height:220px}.top-bar{justify-content:center}.logo-text{width:100%;text-align:center}}
+@media(max-width:850px){.main-grid{grid-template-columns:1fr}.amount-box{grid-template-columns:1fr}.top-bar{justify-content:center}.logo-text{width:100%;text-align:center}.payment-link-card{padding:16px}.btn{width:100%}}
 `;
 
 export default function ParticiparPage() {
@@ -90,7 +96,18 @@ export default function ParticiparPage() {
     cargarUsuario();
   }, []);
 
-  const puedeGuardar = nombre.trim() && email.trim() && whatsapp.trim();
+  const puedeGuardar = Boolean(nombre.trim() && email.trim() && whatsapp.trim());
+
+  async function copiarLinkPago() {
+    try {
+      await navigator.clipboard.writeText(LINK_PAGO_ASTROPAY);
+      setMensaje("Link de pago copiado.");
+      setErrorMsg("");
+    } catch {
+      setErrorMsg("No pude copiar el link. Abrilo con el botón de pago.");
+      setMensaje("");
+    }
+  }
 
   async function listoYaPague() {
     setErrorMsg("");
@@ -125,7 +142,7 @@ export default function ParticiparPage() {
 
     const { data: prediccionActual, error: readError } = await supabase
       .from("predictions")
-      .select("prediction_data")
+      .select("prediction_data, status")
       .eq("id", predictionId)
       .eq("user_id", user.id)
       .single();
@@ -136,31 +153,41 @@ export default function ParticiparPage() {
       return;
     }
 
-const { error: updateError } = await supabase
-  .from("predictions")
-  .update({
-    email,
-    nombre,
-    status: "en_revision",
-    submitted_at: new Date().toISOString(),
-    prediction_data: {
-      ...prediccionActual.prediction_data,
-      participante: {
-        nombre,
+    if (prediccionActual.status !== "borrador") {
+      setErrorMsg("Esta predicción ya fue enviada y no puede volver a modificarse.");
+      setLoading(false);
+      return;
+    }
+
+    const { error: updateError } = await supabase
+      .from("predictions")
+      .update({
         email,
-        whatsapp,
-        usuario,
-      },
-      pago: {
-        metodo: "AstroPay",
-        monto: 500,
-        confirmado_por_usuario: true,
-        confirmado_at: new Date().toISOString(),
-      },
-    },
-  })
-  .eq("id", predictionId)
-  .eq("user_id", user.id);
+        nombre,
+        status: "en_revision",
+        submitted_at: new Date().toISOString(),
+        prediction_data: {
+          ...prediccionActual.prediction_data,
+          participante: {
+            nombre,
+            email,
+            whatsapp,
+            usuario,
+          },
+          pago: {
+            metodo: "AstroPay",
+            tipo: "link_de_pago",
+            monto: 500,
+            link_pago: LINK_PAGO_ASTROPAY,
+            confirmado_por_usuario: true,
+            confirmado_at: new Date().toISOString(),
+          },
+        },
+      })
+      .eq("id", predictionId)
+      .eq("user_id", user.id)
+      .eq("status", "borrador");
+
     if (updateError) {
       setErrorMsg(updateError.message);
       setLoading(false);
@@ -189,7 +216,7 @@ const { error: updateError } = await supabase
       <section className="hero">
         <div className="badge">Participá por el Premio</div>
         <h1>CONFIRMÁ TU PREDICCIÓN</h1>
-        <p>Completá tus datos, pagá con el QR y tocá “Listo, ya pagué”.</p>
+        <p>Completá tus datos, abrí el link de pago y tocá “Listo, ya pagué”.</p>
       </section>
 
       <section className="main-grid">
@@ -242,14 +269,18 @@ const { error: updateError } = await supabase
             </div>
           </div>
 
+          <div className="notice">
+            Para confirmar la participación, el pago queda marcado como en revisión hasta que sea validado manualmente.
+          </div>
+
           {mensaje && <div className="success-box">{mensaje}</div>}
           {errorMsg && <div className="error-box">{errorMsg}</div>}
         </div>
 
         <div className="card">
-          <div className="card-title">2. Pago con QR</div>
+          <div className="card-title">2. Link de pago</div>
           <div className="card-subtitle">
-            Escaneá el QR con AstroPay y pagá la participación.
+            Abrí el link de AstroPay, completá el pago y después confirmá la operación.
           </div>
 
           <div className="amount-box">
@@ -264,26 +295,37 @@ const { error: updateError } = await supabase
             </div>
           </div>
 
-          <div className="qr-box">
-<a
-  href="https://onetouch.astropay.com/payment?external_reference_id=uF0376wokKmLzDTuxJ8RMchqPxnQSY9r"
-  target="_blank"
-  rel="noopener noreferrer"
-  className="btn btn-primary"
-  style={{
-    width: "100%",
-    maxWidth: "320px",
-    height: "70px",
-    fontSize: "18px",
-  }}
->
-  💳 PAGAR CON ASTROPAY
-</a>
+          <div className="payment-box">
+            <div className="payment-link-card">
+              <div className="payment-title">Pago por link</div>
+              <div className="payment-text">
+                Se abre una pestaña nueva de AstroPay para completar el pago.
+              </div>
+
+              <a
+                href={LINK_PAGO_ASTROPAY}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="btn btn-primary"
+                style={{ width: "100%", maxWidth: 360, height: 64, fontSize: 17 }}
+              >
+                💳 Abrir link de pago
+              </a>
+
+              <button
+                type="button"
+                className="btn btn-secondary"
+                style={{ width: "100%", maxWidth: 360 }}
+                onClick={copiarLinkPago}
+              >
+                📋 Copiar link de pago
+              </button>
+            </div>
 
             <div className="steps">
               <div className="step">
                 <div className="step-num">1</div>
-                Escaneá el QR con AstroPay.
+                Abrí el link de pago de AstroPay.
               </div>
 
               <div className="step">
@@ -293,7 +335,7 @@ const { error: updateError } = await supabase
 
               <div className="step">
                 <div className="step-num">3</div>
-                Después de pagar, tocá el botón “Listo, ya pagué”.
+                Después de pagar, tocá “Listo, ya pagué”.
               </div>
             </div>
 
@@ -301,6 +343,7 @@ const { error: updateError } = await supabase
               className="btn btn-primary"
               onClick={listoYaPague}
               disabled={loading || !puedeGuardar}
+              style={{ width: "100%" }}
             >
               {loading ? "Guardando..." : "✅ Listo, ya pagué"}
             </button>

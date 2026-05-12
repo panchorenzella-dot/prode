@@ -454,6 +454,7 @@ export default function SimuladorMundial2026() {
   const [champion, setChampion] = useState<Team | null>(null);
   const [savedPredictionId, setSavedPredictionId] = useState<string | null>(null);
   const [savingPrediction, setSavingPrediction] = useState(false);
+  const [predictionLocked, setPredictionLocked] = useState(false);
 
   useEffect(() => {
     if (document.getElementById("mundial-2026-styles")) return;
@@ -468,6 +469,33 @@ export default function SimuladorMundial2026() {
     };
   }, []);
 
+  useEffect(() => {
+    async function loadCurrentPredictionStatus() {
+      const predictionId = localStorage.getItem("current_prediction_id");
+      if (!predictionId) return;
+
+      const {
+        data: { user },
+      } = await supabase.auth.getUser();
+
+      if (!user) return;
+
+      const { data, error } = await supabase
+        .from("predictions")
+        .select("id, status")
+        .eq("id", predictionId)
+        .eq("user_id", user.id)
+        .single();
+
+      if (error || !data) return;
+
+      setSavedPredictionId(data.id);
+      setPredictionLocked(data.status !== "borrador");
+    }
+
+    loadCurrentPredictionStatus();
+  }, []);
+
   const buildPredictionData = useCallback(() => {
     return {
       groups,
@@ -480,6 +508,11 @@ export default function SimuladorMundial2026() {
   }, [groups, selectedThirds, bracket, champion, currentRound]);
 
   const guardarPrediccion = useCallback(async () => {
+    if (predictionLocked) {
+      alert("Esta predicción ya fue enviada y no puede editarse.");
+      return null;
+    }
+
     setSavingPrediction(true);
 
     const {
@@ -504,7 +537,8 @@ export default function SimuladorMundial2026() {
           status: "borrador",
         })
         .eq("id", savedPredictionId)
-        .eq("user_id", user.id);
+        .eq("user_id", user.id)
+        .eq("status", "borrador");
 
       setSavingPrediction(false);
 
@@ -537,7 +571,7 @@ export default function SimuladorMundial2026() {
     localStorage.setItem("current_prediction_id", data.id);
 
     return data.id;
-  }, [buildPredictionData, savedPredictionId]);
+  }, [buildPredictionData, predictionLocked, savedPredictionId]);
 
   const irAParticipar = useCallback(async () => {
     const id = await guardarPrediccion();
@@ -576,6 +610,8 @@ export default function SimuladorMundial2026() {
   const stageIndex = stageSteps.findIndex((step) => step.id === stage);
 
   const updateMatch = useCallback((groupId: GroupId, matchId: string, result: GroupResult) => {
+    if (predictionLocked) return;
+
     setGroups((prevGroups) =>
       prevGroups.map((group) => {
         if (group.id !== groupId) return group;
@@ -589,17 +625,23 @@ export default function SimuladorMundial2026() {
         };
       })
     );
-  }, []);
+  }, [predictionLocked]);
 
   const simulateGroup = useCallback((groupId: GroupId) => {
+    if (predictionLocked) return;
+
     setGroups((prevGroups) => prevGroups.map((group) => (group.id === groupId ? simulateGroupFull(group) : group)));
-  }, []);
+  }, [predictionLocked]);
 
   const simulateAllGroups = useCallback(() => {
+    if (predictionLocked) return;
+
     setGroups((prevGroups) => prevGroups.map(simulateGroupFull));
-  }, []);
+  }, [predictionLocked]);
 
   const resetAll = useCallback(() => {
+    if (predictionLocked) return;
+
     setGroups(initGroups());
     setSelectedThirds([]);
     setBracket([]);
@@ -607,9 +649,11 @@ export default function SimuladorMundial2026() {
     setStage("groups");
     setChampion(null);
     setShowConfetti(false);
-  }, []);
+  }, [predictionLocked]);
 
   const toggleThird = useCallback((team: Team) => {
+    if (predictionLocked) return;
+
     setSelectedThirds((prevSelected) => {
       const alreadySelected = prevSelected.some((selectedTeam) => selectedTeam.id === team.id);
       if (alreadySelected) return prevSelected.filter((selectedTeam) => selectedTeam.id !== team.id);
@@ -619,25 +663,35 @@ export default function SimuladorMundial2026() {
   }, []);
 
   const advanceToKnockout = useCallback(() => {
+    if (predictionLocked) return;
+
     setBracket(buildBracket(groups, selectedThirds));
     setCurrentRound("r32");
     setChampion(null);
     setStage("knockout");
-  }, [groups, selectedThirds]);
+  }, [groups, predictionLocked, selectedThirds]);
 
   const updateKnockoutWinner = useCallback((matchId: string, winner: Team) => {
+    if (predictionLocked) return;
+
     setBracket((prevBracket) => prevBracket.map((match) => (match.id === matchId ? { ...match, winner } : match)));
-  }, []);
+  }, [predictionLocked]);
 
   const updateKnockoutMethod = useCallback((matchId: string, method: KoMethod) => {
+    if (predictionLocked) return;
+
     setBracket((prevBracket) => prevBracket.map((match) => (match.id === matchId ? { ...match, method } : match)));
-  }, []);
+  }, [predictionLocked]);
 
   const simulateKnockout = useCallback((matchId: string) => {
+    if (predictionLocked) return;
+
     setBracket((prevBracket) => prevBracket.map((match) => (match.id === matchId ? simulateKnockoutMatch(match) : match)));
-  }, []);
+  }, [predictionLocked]);
 
   const simulateAllKnockout = useCallback(() => {
+    if (predictionLocked) return;
+
     setBracket((prevBracket) =>
       prevBracket.map((match) => {
         if (match.round !== currentRound) return match;
@@ -646,9 +700,11 @@ export default function SimuladorMundial2026() {
         return simulateKnockoutMatch(match);
       })
     );
-  }, [currentRound]);
+  }, [currentRound, predictionLocked]);
 
   const advanceRound = useCallback(() => {
+    if (predictionLocked) return;
+
     const nextRound = NEXT_ROUND[currentRound];
     if (!nextRound) return;
 
@@ -657,7 +713,7 @@ export default function SimuladorMundial2026() {
 
     setBracket((prevBracket) => [...prevBracket.filter((match) => match.round !== nextRound), ...newMatches]);
     setCurrentRound(nextRound);
-  }, [bracket, currentRound]);
+  }, [bracket, currentRound, predictionLocked]);
 
   useEffect(() => {
     if (currentRound !== "final") return;
@@ -698,16 +754,33 @@ export default function SimuladorMundial2026() {
       </div>
 
       <div className="container">
+        {predictionLocked && (
+          <div
+            style={{
+              marginBottom: 20,
+              padding: 16,
+              borderRadius: 16,
+              background: "rgba(255,215,0,0.12)",
+              border: "1px solid rgba(255,215,0,0.3)",
+              color: "#ffd700",
+              fontWeight: 800,
+              textAlign: "center",
+            }}
+          >
+            🔒 Esta predicción ya fue enviada y no puede editarse.
+          </div>
+        )}
+
         {stage === "groups" && (
           <>
             <div className="controls">
-              <button className="btn btn-primary" onClick={simulateAllGroups}>
+              <button className="btn btn-primary" onClick={simulateAllGroups} disabled={predictionLocked}>
                 ⚡ Simular Todos los Grupos
               </button>
-              <button className="btn btn-secondary" onClick={() => setStage("thirds")} disabled={!allGroupsComplete(groups)}>
+              <button className="btn btn-secondary" onClick={() => setStage("thirds")} disabled={predictionLocked || !allGroupsComplete(groups)}>
                 Continuar → Mejores Terceros
               </button>
-              <button className="btn btn-danger btn-sm" onClick={resetAll}>
+              <button className="btn btn-danger btn-sm" onClick={resetAll} disabled={predictionLocked}>
                 🔄 Reiniciar
               </button>
             </div>
@@ -724,7 +797,7 @@ export default function SimuladorMundial2026() {
                     <div className="group-card-header">
                       <span className="group-label">GRUPO {group.id}</span>
                       <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
-                        <button className="btn btn-secondary btn-sm" onClick={() => simulateGroup(group.id)} disabled={complete}>
+                        <button className="btn btn-secondary btn-sm" onClick={() => simulateGroup(group.id)} disabled={predictionLocked || complete}>
                           ⚡ Simular
                         </button>
                         <span className={`group-status ${complete ? "complete" : partial ? "partial" : "pending"}`}>
@@ -771,18 +844,21 @@ export default function SimuladorMundial2026() {
                           <div className="match-score-box" style={{ gap: 6, flexWrap: "wrap", justifyContent: "center" }}>
                             <button
                               className={`btn btn-sm ${match.result === "team1" ? "btn-primary" : "btn-ghost"}`}
+                              disabled={predictionLocked}
                               onClick={() => updateMatch(group.id, match.id, "team1")}
                             >
                               Gana
                             </button>
                             <button
                               className={`btn btn-sm ${match.result === "draw" ? "btn-primary" : "btn-ghost"}`}
+                              disabled={predictionLocked}
                               onClick={() => updateMatch(group.id, match.id, "draw")}
                             >
                               Empate
                             </button>
                             <button
                               className={`btn btn-sm ${match.result === "team2" ? "btn-primary" : "btn-ghost"}`}
+                              disabled={predictionLocked}
                               onClick={() => updateMatch(group.id, match.id, "team2")}
                             >
                               Gana
@@ -803,7 +879,7 @@ export default function SimuladorMundial2026() {
 
             {allGroupsComplete(groups) && (
               <div className="next-round-bar">
-                <button className="btn btn-primary" onClick={() => setStage("thirds")}>
+                <button className="btn btn-primary" onClick={() => setStage("thirds")} disabled={predictionLocked}>
                   ✅ Seleccionar Mejores Terceros →
                 </button>
               </div>
@@ -817,7 +893,7 @@ export default function SimuladorMundial2026() {
               <button className="btn btn-ghost" onClick={() => setStage("groups")}>
                 ← Volver a Grupos
               </button>
-              <button className="btn btn-primary" onClick={advanceToKnockout} disabled={selectedThirds.length !== 8}>
+              <button className="btn btn-primary" onClick={advanceToKnockout} disabled={predictionLocked || selectedThirds.length !== 8}>
                 ⚽ Avanzar a la Fase Final →
               </button>
             </div>
@@ -830,7 +906,7 @@ export default function SimuladorMundial2026() {
             <div className="thirds-grid">
               {thirdPlaceTeams.map((standing) => {
                 const isSelected = selectedThirds.some((team) => team.id === standing.team.id);
-                const disabled = !isSelected && selectedThirds.length >= 8;
+                const disabled = predictionLocked || (!isSelected && selectedThirds.length >= 8);
 
                 return (
                   <div
@@ -854,7 +930,7 @@ export default function SimuladorMundial2026() {
 
             {selectedThirds.length === 8 && (
               <div className="next-round-bar">
-                <button className="btn btn-primary" onClick={advanceToKnockout}>
+                <button className="btn btn-primary" onClick={advanceToKnockout} disabled={predictionLocked}>
                   🏆 Comenzar Fase Final →
                 </button>
               </div>
@@ -875,12 +951,12 @@ export default function SimuladorMundial2026() {
                   <button
                     className="btn btn-primary"
                     onClick={irAParticipar}
-                    disabled={savingPrediction}
+                    disabled={savingPrediction || predictionLocked}
                   >
                     {savingPrediction ? "Guardando..." : "🏆 Participar por el Premio"}
                   </button>
 
-                  <button className="btn btn-danger" onClick={resetAll}>
+                  <button className="btn btn-danger" onClick={resetAll} disabled={predictionLocked}>
                     🔄 Nueva Simulación
                   </button>
                 </div>
@@ -891,11 +967,11 @@ export default function SimuladorMundial2026() {
                   <button className="btn btn-ghost" onClick={() => setStage("thirds")}>
                     ← Terceros
                   </button>
-                  <button className="btn btn-primary" onClick={simulateAllKnockout} disabled={currentRoundDone}>
+                  <button className="btn btn-primary" onClick={simulateAllKnockout} disabled={predictionLocked || currentRoundDone}>
                     ⚡ Simular Todos
                   </button>
                   {currentRoundDone && currentRound !== "final" && NEXT_ROUND[currentRound] && (
-                    <button className="btn btn-secondary" onClick={advanceRound}>
+                    <button className="btn btn-secondary" onClick={advanceRound} disabled={predictionLocked}>
                       Avanzar → {ROUND_LABELS[NEXT_ROUND[currentRound]]}
                     </button>
                   )}
@@ -961,7 +1037,7 @@ export default function SimuladorMundial2026() {
                           <div style={{ display: "grid", gap: 8, marginTop: 14 }}>
                             <button
                               className={`btn ${match.winner?.id === match.team1?.id ? "btn-primary" : "btn-ghost"}`}
-                              disabled={!match.team1 || !match.team2}
+                              disabled={predictionLocked || !match.team1 || !match.team2}
                               onClick={() => match.team1 && updateKnockoutWinner(match.id, match.team1)}
                             >
                               Gana {match.team1?.name ?? "Equipo 1"}
@@ -969,7 +1045,7 @@ export default function SimuladorMundial2026() {
 
                             <button
                               className={`btn ${match.winner?.id === match.team2?.id ? "btn-primary" : "btn-ghost"}`}
-                              disabled={!match.team1 || !match.team2}
+                              disabled={predictionLocked || !match.team1 || !match.team2}
                               onClick={() => match.team2 && updateKnockoutWinner(match.id, match.team2)}
                             >
                               Gana {match.team2?.name ?? "Equipo 2"}
@@ -980,18 +1056,21 @@ export default function SimuladorMundial2026() {
                             <div style={{ display: "flex", gap: 8, flexWrap: "wrap", justifyContent: "center", marginTop: 14 }}>
                               <button
                                 className={`btn btn-sm ${match.method === "normal" ? "btn-primary" : "btn-ghost"}`}
+                                disabled={predictionLocked}
                                 onClick={() => updateKnockoutMethod(match.id, "normal")}
                               >
                                 Normal
                               </button>
                               <button
                                 className={`btn btn-sm ${match.method === "suplementario" ? "btn-primary" : "btn-ghost"}`}
+                                disabled={predictionLocked}
                                 onClick={() => updateKnockoutMethod(match.id, "suplementario")}
                               >
                                 Suplementario
                               </button>
                               <button
                                 className={`btn btn-sm ${match.method === "penales" ? "btn-primary" : "btn-ghost"}`}
+                                disabled={predictionLocked}
                                 onClick={() => updateKnockoutMethod(match.id, "penales")}
                               >
                                 Penales
@@ -1009,7 +1088,7 @@ export default function SimuladorMundial2026() {
                             <span style={{ fontSize: 12, color: "var(--text-muted)" }}>Sin resultado</span>
                           )}
 
-                          <button className="btn btn-secondary btn-sm" disabled={!match.team1 || !match.team2} onClick={() => simulateKnockout(match.id)}>
+                          <button className="btn btn-secondary btn-sm" disabled={predictionLocked || !match.team1 || !match.team2} onClick={() => simulateKnockout(match.id)}>
                             🎲 Simular
                           </button>
                         </div>

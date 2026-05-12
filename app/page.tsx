@@ -9,19 +9,39 @@ const mundialStart = new Date("2026-06-11T19:00:00Z").getTime();
 const grupos = [
   {
     grupo: "Grupo A",
-    equipos: ["🇲🇽 México", "🇿🇦 Sudáfrica", "🇰🇷 Corea del Sur", "🇨🇿 República Checa"],
+    equipos: [
+      { nombre: "México", flag: "mx" },
+      { nombre: "Sudáfrica", flag: "za" },
+      { nombre: "Corea del Sur", flag: "kr" },
+      { nombre: "República Checa", flag: "cz" },
+    ],
   },
   {
     grupo: "Grupo B",
-    equipos: ["🇨🇦 Canadá", "🇧🇦 Bosnia", "🇶🇦 Qatar", "🇨🇭 Suiza"],
+    equipos: [
+      { nombre: "Canadá", flag: "ca" },
+      { nombre: "Bosnia", flag: "ba" },
+      { nombre: "Qatar", flag: "qa" },
+      { nombre: "Suiza", flag: "ch" },
+    ],
   },
   {
     grupo: "Grupo C",
-    equipos: ["🇧🇷 Brasil", "🇲🇦 Marruecos", "🇭🇹 Haití", "🏴 Escocia"],
+    equipos: [
+      { nombre: "Brasil", flag: "br" },
+      { nombre: "Marruecos", flag: "ma" },
+      { nombre: "Haití", flag: "ht" },
+      { nombre: "Escocia", flag: "gb-sct" },
+    ],
   },
   {
     grupo: "Grupo D",
-    equipos: ["🇺🇸 Estados Unidos", "🇵🇾 Paraguay", "🇦🇺 Australia", "🇽🇰 Kosovo"],
+    equipos: [
+      { nombre: "Estados Unidos", flag: "us" },
+      { nombre: "Paraguay", flag: "py" },
+      { nombre: "Australia", flag: "au" },
+      { nombre: "Kosovo", flag: "xk" },
+    ],
   },
 ];
 
@@ -31,6 +51,16 @@ const llaves = [
   ["1° Grupo E", "2° Grupo F"],
   ["1° Grupo G", "2° Grupo H"],
 ];
+
+function FlagImg({ code, name }: { code: string; name: string }) {
+  return (
+    <img
+      src={`https://flagcdn.com/w80/${code.toLowerCase()}.png`}
+      alt={name}
+      className="h-5 w-7 rounded object-cover ring-1 ring-white/10"
+    />
+  );
+}
 
 export default function HomePage() {
   const [userEmail, setUserEmail] = useState<string | null>(null);
@@ -85,7 +115,7 @@ export default function HomePage() {
 
       <div className="relative mx-auto max-w-7xl px-4 py-5 sm:px-6 lg:px-8">
         <nav className="flex items-center justify-between gap-4 rounded-2xl border border-white/10 bg-white/5 px-4 py-3 backdrop-blur">
-          <div className="flex items-center gap-2">
+          <a href="/" className="flex items-center gap-2">
             <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-gradient-to-br from-amber-400 to-cyan-400 text-black">
               <Trophy size={22} />
             </div>
@@ -94,9 +124,16 @@ export default function HomePage() {
               <p className="text-sm font-semibold leading-none">Prode Mundial</p>
               <p className="text-xs text-white/50">Predicciones 2026</p>
             </div>
-          </div>
+          </a>
 
           <div className="flex items-center gap-3">
+            <a
+              href="/como-funciona"
+              className="hidden rounded-xl border border-white/10 bg-white/5 px-4 py-2 text-sm font-bold text-white/80 transition hover:bg-white/10 md:inline-block"
+            >
+              Cómo funciona
+            </a>
+
             <a
               href="/prediccion"
               className="hidden rounded-xl bg-white px-4 py-2 text-sm font-bold text-black sm:inline-block"
@@ -106,13 +143,13 @@ export default function HomePage() {
 
             {userEmail ? (
               <div className="relative">
-<a
-  href="/perfil"
-  className="flex items-center gap-2 rounded-xl border border-white/10 bg-white/5 px-4 py-2 text-sm font-bold text-white/85 transition hover:bg-white/10"
->
-  <User size={17} />
-  Tu perfil
-</a>
+                <button
+                  onClick={() => setPerfilAbierto((value) => !value)}
+                  className="flex items-center gap-2 rounded-xl border border-white/10 bg-white/5 px-4 py-2 text-sm font-bold text-white/85 transition hover:bg-white/10"
+                >
+                  <User size={17} />
+                  Tu perfil
+                </button>
 
                 {perfilAbierto && (
                   <div className="absolute right-0 z-20 mt-3 w-64 rounded-2xl border border-white/10 bg-[#0b1020] p-4 shadow-2xl">
@@ -181,13 +218,22 @@ export default function HomePage() {
               <CounterBox label="Seg" value={timeLeft.segundos} />
             </div>
 
-            <a
-              href="/prediccion"
-              className="mt-8 inline-flex items-center justify-center gap-2 rounded-2xl bg-white px-6 py-4 font-bold text-black transition hover:scale-[1.02]"
-            >
-              Crear mi predicción
-              <ChevronRight size={20} />
-            </a>
+            <div className="mt-8 flex flex-wrap gap-3">
+              <a
+                href="/prediccion"
+                className="inline-flex items-center justify-center gap-2 rounded-2xl bg-white px-6 py-4 font-bold text-black transition hover:scale-[1.02]"
+              >
+                Crear mi predicción
+                <ChevronRight size={20} />
+              </a>
+
+              <a
+                href="/como-funciona"
+                className="inline-flex items-center justify-center gap-2 rounded-2xl border border-white/10 bg-white/5 px-6 py-4 font-bold text-white/80 transition hover:bg-white/10"
+              >
+                Cómo funciona
+              </a>
+            </div>
 
             <p className="mt-5 text-sm text-white/40">
               Sin datos falsos: el ranking se activa cuando haya usuarios y
@@ -225,10 +271,11 @@ export default function HomePage() {
                         <div className="space-y-2">
                           {grupo.equipos.map((equipo) => (
                             <div
-                              key={equipo}
-                              className="rounded-xl bg-black/25 px-3 py-2 text-sm text-white/80"
+                              key={equipo.nombre}
+                              className="flex items-center gap-3 rounded-xl bg-black/25 px-3 py-2 text-sm text-white/80"
                             >
-                              {equipo}
+                              <FlagImg code={equipo.flag} name={equipo.nombre} />
+                              <span>{equipo.nombre}</span>
                             </div>
                           ))}
                         </div>
