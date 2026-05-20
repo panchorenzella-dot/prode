@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { supabase } from "@/lib/supabaseClient";
+import { THIRD_PLACE_TABLE } from "./ThirdPlaceTable";
 
 const CSS = `
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=Bebas+Neue&display=swap');
@@ -180,14 +181,14 @@ const TEAMS: Team[] = [
   { id: "austria", name: "Austria", flag: "at", group: "J" },
   { id: "argelia", name: "Argelia", flag: "dz", group: "J" },
   { id: "jordania", name: "Jordania", flag: "jo", group: "J" },
-  { id: "portugal", name: "Portugal", flag: "pt", group: "K" },
-  { id: "colombia", name: "Colombia", flag: "co", group: "K" },
-  { id: "uzbekistan", name: "Uzbekistán", flag: "uz", group: "K" },
-  { id: "panama", name: "Panamá", flag: "pa", group: "K" },
-  { id: "inglaterra", name: "Inglaterra", flag: "gb-eng", group: "L" },
-  { id: "italia", name: "Italia", flag: "it", group: "L" },
-  { id: "camerun", name: "Camerún", flag: "cm", group: "L" },
-  { id: "venezuela", name: "Venezuela", flag: "ve", group: "L" },
+ { id: "portugal", name: "Portugal", flag: "pt", group: "K" },
+{ id: "rd_congo", name: "RD Congo", flag: "cd", group: "K" },
+{ id: "uzbekistan", name: "Uzbekistán", flag: "uz", group: "K" },
+{ id: "colombia", name: "Colombia", flag: "co", group: "K" },
+{ id: "inglaterra", name: "Inglaterra", flag: "gb-eng", group: "L" },
+{ id: "croacia", name: "Croacia", flag: "hr", group: "L" },
+{ id: "ghana", name: "Ghana", flag: "gh", group: "L" },
+{ id: "panama", name: "Panamá", flag: "pa", group: "L" },
 ];
 
 const GROUPS: GroupId[] = ["A", "B", "C", "D", "E", "F", "G", "H", "I", "J", "K", "L"];
@@ -337,35 +338,65 @@ function simulateKnockoutMatch(match: KnockoutMatch): KnockoutMatch {
   };
 }
 
-function buildBracket(groups: GroupState[], selectedThirds: Team[]): KnockoutMatch[] {
-  const winners = groups.map((group) => group.standings[0]?.team).filter(Boolean) as Team[];
-  const runnerUps = groups.map((group) => group.standings[1]?.team).filter(Boolean) as Team[];
+function getTeamBySlot(
+  slot: string,
+  groups: GroupState[],
+  selectedThirds: Team[]
+): Team | null {
+  const groupLetter = slot.replace("1", "").replace("2", "").replace("3", "") as GroupId;
+  const pos = Number(slot[0]) - 1;
 
-  const pairs: Array<[Team | null, Team | null]> = [
-    [winners[0] ?? null, selectedThirds[0] ?? null],
-    [winners[1] ?? null, selectedThirds[1] ?? null],
-    [winners[2] ?? null, selectedThirds[2] ?? null],
-    [winners[3] ?? null, selectedThirds[3] ?? null],
-    [winners[4] ?? null, selectedThirds[4] ?? null],
-    [winners[5] ?? null, selectedThirds[5] ?? null],
-    [winners[6] ?? null, selectedThirds[6] ?? null],
-    [winners[7] ?? null, selectedThirds[7] ?? null],
-    [winners[8] ?? null, runnerUps[11] ?? null],
-    [winners[9] ?? null, runnerUps[10] ?? null],
-    [winners[10] ?? null, runnerUps[9] ?? null],
-    [winners[11] ?? null, runnerUps[8] ?? null],
-    [runnerUps[0] ?? null, runnerUps[3] ?? null],
-    [runnerUps[1] ?? null, runnerUps[2] ?? null],
-    [runnerUps[4] ?? null, runnerUps[7] ?? null],
-    [runnerUps[5] ?? null, runnerUps[6] ?? null],
+  if (slot.startsWith("3")) {
+    return selectedThirds.find((team) => team.group === groupLetter) ?? null;
+  }
+
+  const group = groups.find((g) => g.id === groupLetter);
+
+  return group?.standings[pos]?.team ?? null;
+}
+
+function buildBracket(
+  groups: GroupState[],
+  selectedThirds: Team[]
+): KnockoutMatch[] {
+
+  const thirdKey = selectedThirds
+    .map((team) => team.group)
+    .sort()
+    .join("-");
+
+  const thirdMap = THIRD_PLACE_TABLE[thirdKey];
+
+  if (!thirdMap) {
+    alert("Combinación de terceros no encontrada: " + thirdKey);
+    return [];
+  }
+
+  const pairs: Array<[string, string]> = [
+    ["2A", "2B"],
+    ["1E", thirdMap["1E"]],
+    ["1F", "2C"],
+    ["1C", "2F"],
+    ["1I", thirdMap["1I"]],
+    ["2E", "2I"],
+    ["1A", thirdMap["1A"]],
+    ["1L", thirdMap["1L"]],
+    ["1D", thirdMap["1D"]],
+    ["1G", thirdMap["1G"]],
+    ["2K", "2L"],
+    ["1H", "2J"],
+    ["1B", thirdMap["1B"]],
+    ["1J", "2H"],
+    ["1K", thirdMap["1K"]],
+    ["2D", "2G"],
   ];
 
-  return pairs.map(([team1, team2], index) => ({
+  return pairs.map(([slot1, slot2], index) => ({
     id: uid(),
     round: "r32",
     matchIndex: index,
-    team1,
-    team2,
+    team1: getTeamBySlot(slot1, groups, selectedThirds),
+    team2: getTeamBySlot(slot2, groups, selectedThirds),
     winner: null,
     method: null,
   }));
@@ -448,6 +479,7 @@ export default function SimuladorMundial2026() {
   const [stage, setStage] = useState<Stage>("groups");
   const [groups, setGroups] = useState<GroupState[]>(() => initGroups());
   const [selectedThirds, setSelectedThirds] = useState<Team[]>([]);
+  const [manualThirdOrder, setManualThirdOrder] = useState<Team[]>([]);
   const [bracket, setBracket] = useState<KnockoutMatch[]>([]);
   const [currentRound, setCurrentRound] = useState<Round>("r32");
   const [showConfetti, setShowConfetti] = useState(false);
@@ -581,18 +613,21 @@ export default function SimuladorMundial2026() {
     window.location.href = `/participar?prediction_id=${id}`;
   }, [guardarPrediccion]);
 
-  const thirdPlaceTeams = useMemo(
-    () =>
-      groups
-        .map((group) => group.standings[2])
-        .filter(Boolean)
-        .sort((a, b) => {
-          if (b.pts !== a.pts) return b.pts - a.pts;
-          if (b.g !== a.g) return b.g - a.g;
-          return a.team.name.localeCompare(b.team.name);
-        }),
-    [groups]
-  );
+const thirdPlaceTeams = useMemo(
+  () =>
+    groups
+      .map((group) => group.standings[2])
+      .filter(Boolean)
+      .sort((a, b) => {
+        if (b.pts !== a.pts) return b.pts - a.pts;
+        return a.team.name.localeCompare(b.team.name);
+      }),
+  [groups]
+);
+
+useEffect(() => {
+  setManualThirdOrder(thirdPlaceTeams.map((standing) => standing.team));
+}, [thirdPlaceTeams]);
 
   const roundMatches = useMemo(
     () => bracket.filter((match) => match.round === currentRound),
@@ -662,14 +697,19 @@ export default function SimuladorMundial2026() {
     });
   }, []);
 
-  const advanceToKnockout = useCallback(() => {
-    if (predictionLocked) return;
+const advanceToKnockout = useCallback(() => {
+  if (predictionLocked) return;
 
-    setBracket(buildBracket(groups, selectedThirds));
-    setCurrentRound("r32");
-    setChampion(null);
-    setStage("knockout");
-  }, [groups, predictionLocked, selectedThirds]);
+  const topEightThirds = manualThirdOrder.slice(0, 8);
+
+  setSelectedThirds(topEightThirds);
+
+  setBracket(buildBracket(groups, topEightThirds));
+
+  setCurrentRound("r32");
+  setChampion(null);
+  setStage("knockout");
+}, [groups, manualThirdOrder, predictionLocked]);
 
   const updateKnockoutWinner = useCallback((matchId: string, winner: Team) => {
     if (predictionLocked) return;
@@ -893,7 +933,7 @@ export default function SimuladorMundial2026() {
               <button className="btn btn-ghost" onClick={() => setStage("groups")}>
                 ← Volver a Grupos
               </button>
-              <button className="btn btn-primary" onClick={advanceToKnockout} disabled={predictionLocked || selectedThirds.length !== 8}>
+              <button className="btn btn-primary" onClick={advanceToKnockout} disabled={predictionLocked}>
                 ⚽ Avanzar a la Fase Final →
               </button>
             </div>
@@ -903,30 +943,77 @@ export default function SimuladorMundial2026() {
               Seleccioná <strong>8 de 12</strong> equipos terceros. Seleccionados: <strong style={{ color: selectedThirds.length === 8 ? "var(--green)" : "var(--gold)" }}>{selectedThirds.length}/8</strong>
             </div>
 
-            <div className="thirds-grid">
-              {thirdPlaceTeams.map((standing) => {
-                const isSelected = selectedThirds.some((team) => team.id === standing.team.id);
-                const disabled = predictionLocked || (!isSelected && selectedThirds.length >= 8);
+<div className="thirds-grid">
+  {manualThirdOrder.map((team, index) => {
 
-                return (
-                  <div
-                    key={standing.team.id}
-                    className={`third-card ${isSelected ? "selected" : ""}`}
-                    style={{ opacity: disabled ? 0.5 : 1, cursor: disabled ? "not-allowed" : "pointer" }}
-                    onClick={() => !disabled && toggleThird(standing.team)}
-                  >
-                    <Flag code={standing.team.flag} name={standing.team.name} />
-                    <div className="third-card-info">
-                      <div className="third-card-name">{standing.team.name}</div>
-                      <div className="third-card-stats">
-                        Grupo {standing.team.group} · {standing.pts} pts · {standing.g} ganados
-                      </div>
-                    </div>
-                    <div className="third-card-check">{isSelected ? "✓" : ""}</div>
-                  </div>
-                );
-              })}
-            </div>
+    const moveUp = () => {
+      if (index === 0) return;
+
+      const updated = [...manualThirdOrder];
+
+      [updated[index - 1], updated[index]] = [
+        updated[index],
+        updated[index - 1],
+      ];
+
+      setManualThirdOrder(updated);
+    };
+
+    const moveDown = () => {
+      if (index === manualThirdOrder.length - 1) return;
+
+      const updated = [...manualThirdOrder];
+
+      [updated[index + 1], updated[index]] = [
+        updated[index],
+        updated[index + 1],
+      ];
+
+      setManualThirdOrder(updated);
+    };
+
+    const standing = thirdPlaceTeams.find(
+      (s) => s.team.id === team.id
+    );
+
+    const qualifies = index < 8;
+
+    return (
+      <div
+        key={team.id}
+        className={`third-card ${qualifies ? "selected" : ""}`}
+      >
+        <Flag code={team.flag} name={team.name} />
+
+        <div className="third-card-info">
+          <div className="third-card-name">
+            #{index + 1} · {team.name}
+          </div>
+
+          <div className="third-card-stats">
+            Grupo {team.group} · {standing?.pts ?? 0} pts
+          </div>
+        </div>
+
+        <div style={{ display: "flex", gap: 6 }}>
+          <button
+            className="btn btn-sm btn-ghost"
+            onClick={moveUp}
+          >
+            ↑
+          </button>
+
+          <button
+            className="btn btn-sm btn-ghost"
+            onClick={moveDown}
+          >
+            ↓
+          </button>
+        </div>
+      </div>
+    );
+  })}
+</div>
 
             {selectedThirds.length === 8 && (
               <div className="next-round-bar">
